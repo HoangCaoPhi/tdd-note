@@ -2,14 +2,21 @@
 namespace Example.Console;
 public class Dollar
 {
-    public int Amount = 10;
+    public int Amount;
 
     public Dollar(int amount)
     {
+         Amount = amount;
     }
 
-    public void Times(int multiplier)
+    public Dollar Times(int multiplier)
     {
-         
+        return new Dollar(Amount * multiplier);
+    }
+
+    public override bool Equals(object? obj)
+    {
+        Dollar dollar = (Dollar)obj;
+        return Amount == dollar.Amount;
     }
 }

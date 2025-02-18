@@ -261,7 +261,311 @@ TDD không chỉ là viết test và làm cho test pass → Cần có bước re
 5. Refactor (cải tiến code, loại bỏ trùng lặp, tổng quát hóa)
 
 
+```
+
+Vấn đề trong code và test hiện tại không phải là do sự lặp lại (duplication) mà là do sự phụ thuộc giữa chúng.
+
+Code và test đang bị ràng buộc lẫn nhau đến mức khi bạn thay đổi code, bạn cũng phải thay đổi test (và ngược lại). Mục tiêu của chúng ta là có thể viết những bài test mới mà “hợp lý” theo cách chúng ta mong muốn, mà không buộc phải thay đổi code đã có.
+
+Sự trùng lặp thường xuất hiện khi cùng một đoạn logic hay biểu thức điều kiện xuất hiện nhiều nơi trong code. Điều này là dấu hiệu cho thấy code của bạn đang phụ thuộc vào cách bạn đã triển khai logic đó.
+
+Sự trùng lặp cũng có thể xuất hiện ở dạng dữ liệu, chẳng hạn như khi sử dụng “magic numbers”. Việc sử dụng hằng số ký hiệu (symbolic constants) giúp loại bỏ phụ thuộc vào các giá trị cụ thể đó. Khi đã dùng hằng số, bạn có thể thay đổi giá trị của chúng mà không cần thay đổi code.
+
+Khác với các vấn đề khác: Trong nhiều trường hợp, việc loại bỏ triệu chứng chỉ làm cho vấn đề xuất hiện ở nơi khác dưới dạng nghiêm trọng hơn.
+
+Trong lập trình, loại bỏ sự trùng lặp không chỉ loại bỏ “triệu chứng” mà còn loại bỏ nguồn gốc của sự phụ thuộc.
+
+Trong TDD, quy tắc thứ hai (“luôn loại bỏ sự trùng lặp”) giúp đảm bảo rằng khi bạn chuyển sang bài test kế tiếp, chỉ cần thực hiện một thay đổi duy nhất để làm cho bài test đó pass. Điều này làm cho quá trình phát triển trở nên rõ ràng và có kiểm soát hơn.
+```
+
+Nhưng ở đây sự trùng lặp không nằm giữa hai đoạn code khác nhau, mà nằm giữa dữ liệu được sử dụng trong bài kiểm thử (test) và dữ liệu cứng (hard-coded) trong code.
+
+Thông thường, bạn thấy sự trùng lặp khi cùng một đoạn logic hoặc biểu thức xuất hiện nhiều nơi trong code.
+
+Ở đây, sự trùng lặp là giữa giá trị "5" và "2" được dùng trong bài kiểm thử và giá trị cứng được viết trực tiếp trong code, ví dụ:
+
+```csharp
+int amount = 5 * 2;
+```
+
+Trong trường hợp này, số 5 được truyền cho constructor và số 2 được dùng làm tham số nhân trong phương thức Times(). Cả hai giá trị này xuất hiện ở hai nơi khác nhau, làm cho code trở nên phụ thuộc vào dữ liệu cứng và gây khó khăn khi cần thay đổi.
+
+Quá trình loại bỏ sự trùng lặp
+
+1. Phát hiện sự trùng lặp:
+- Nhận ra rằng "10" (kết quả của 5 * 2) đã được tính toán sẵn trong đầu, nên giá trị 5 và 2 lại xuất hiện trong code.
+
+2. Chuyển đổi cách thiết lập giá trị:
+- Thay vì tính toán "10" trực tiếp trong phương thức times(), ta chuyển việc lấy giá trị "5" từ đối số của constructor và lưu nó vào biến amount:
+
+```csharp
+    public Dollar(int amount)
+    {
+         Amount = amount;
+    }
+```
+
+3. Sử dụng tham số thay vì hằng số
+Trong phương thức times(), thay vì sử dụng hằng số "2", ta dùng tham số multiplier:
+```csharp
+    public void Times(int multiplier)
+    {
+        Amount *= multiplier;
+    }
+```
+4. Giờ đây, giá trị "5" xuất hiện duy nhất ở nơi được truyền vào constructor, và số nhân được cung cấp thông qua tham số. Điều này loại bỏ sự trùng lặp giữa dữ liệu trong test và code.
+
+=> TDD không chỉ là làm cho bài test pass, mà còn là cải tiến (refactor) code để loại bỏ những sự phụ thuộc không cần thiết và loại bỏ sự trùng lặp.
+
+=> Khi không có sự trùng lặp, ta có thể thêm bài test mới mà không phải thay đổi code đã có, giúp giảm rủi ro và làm cho hệ thống dễ bảo trì hơn.
+
+Bây giờ to do chỉ còn:
+
+```
+To do:
+$5 + 10 CHF = $10 if CHF:USD is 2:1
+$5 * 2 = $10 (Done)
+Make “amount” private
+Dollar side-effects?
+Money rounding?
+```
+
+## Degenerate Objects
+
+ Trước đó, khi thực hiện phép nhân (times) trên đối tượng Dollar, đối tượng đó thay đổi giá trị của nó, nhưng điều này lại không phải là cách thiết kế mà chúng ta mong muốn.
+
+ Ví dụ ban đầu bạn muốn viết test như sau:
+
+ ```csharp
+     [Fact]
+    public void TestMultiplication()
+    {
+        Dollar five = new(5);
+        five.Times(2);
+        Assert.Equal(10, five.Amount);
+
+        five.Times(3);
+        Assert.Equal(15, five.Amount);
+    }
+ ```
+
+ Ở đây, sau khi gọi Times(2), đối tượng five đã biến thành 10, và sau đó Times(3) sẽ tính 10 * 3 = 30, chứ không phải giữ giá trị ban đầu là 5 và nhân với 3 để ra 15. Điều này cho thấy việc gọi Times() làm thay đổi trạng thái của đối tượng, gây ra những vấn đề khi muốn sử dụng đối tượng gốc nhiều lần.
+
+ Để giải quyết vấn đề, ta thay đổi thiết kế sao cho phương thức Times() không làm thay đổi đối tượng ban đầu mà thay vào đó trả về một đối tượng mới với giá trị đã được nhân. Test cũng cần được điều chỉnh tương ứng:
+
+Ở đây, đối tượng five luôn giữ nguyên giá trị ban đầu là 5, và phương thức Times() trả về một đối tượng mới chứa kết quả nhân.
+
+```csharp
+    [Fact]
+    public void TestMultiplication()
+    {
+        Dollar five = new(5);
+        var product = five.Times(2);
+        Assert.Equal(10, product.Amount);
+
+        product = five.Times(3);
+        Assert.Equal(15, product.Amount);
+    }
+```
+Ok, giờ chúng ta sẽ sửa đổi phương thức Times() trong code.
+
+Ban đầu, bạn có thể viết stub của phương thức như sau để code biên dịch:
+
+```csharp
+    public Dollar Times(int multiplier)
+    {
+        Amount *= multiplier;
+        return null;
+    }
+```
+
+Vậy đã biên dịch thành công, nhưng sau đó, để làm cho bài test chạy được, bạn thay đổi thành:
+
+```csharp
+    public Dollar Times(int multiplier)
+    {
+        return new Dollar(Amount * multiplier);
+    }
+```
+
+Điều này có nghĩa là thay vì thay đổi giá trị của đối tượng hiện tại, phương thức sẽ tạo ra một đối tượng Dollar mới với giá trị được nhân.
+
+Sau khi thay đổi, chúng ta có thể "gạch bỏ" một mục trong danh sách việc cần làm (to-do list) và tiếp tục xử lý các vấn đề khác như side-effects, làm cho biến amount trở nên private, xử lý làm tròn tiền, v.v.
+
+```
+To do:
+$5 + 10 CHF = $10 if CHF:USD is 2:1
+~~$5 * 2 = $10~~
+Make “amount” private
+~~Dollar side-effects?~~
+Money rounding?
+```
+
+Hai trong số ba chiến lược chính để nhanh chóng đưa bài test sang trạng thái "green" (tất cả bài test đều pass) trong quá trình TDD, cụ thể:
+
+- Fake It – Đây là chiến lược bạn trả về một hằng số (constant) thay vì tính toán thực sự. Sau đó, từ từ thay thế hằng số đó bằng biến (variables) cho đến khi có được code thực sự hoàn chỉnh.
+
+- Obvious Implementation – Đây là chiến lược bạn gõ trực tiếp code triển khai đúng, dựa trên những gì bạn nghĩ là “rõ ràng” và đúng đắn. Khi mọi thứ suôn sẻ và bạn biết chính xác cần gõ gì, bạn sẽ liên tục gõ “obvious implementation” và chạy bài test để đảm bảo máy tính vẫn hiểu theo cách mà bạn mong đợi.
+
+Trong thực tế, khi làm việc theo TDD, họ thường chuyển đổi giữa hai chế độ này. Khi mọi thứ ổn và bạn tự tin về những gì sẽ gõ, bạn dùng Obvious Implementation; nhưng nếu bất ngờ gặp lỗi (một thanh đỏ hiện ra), bạn quay lại sử dụng chiến lược Fake It để tạm thời “đi qua” lỗi đó, sau đó refactor code cho đúng. 
+
+Một chiến lược thứ ba, gọi là Triangulation, mà sẽ được trình bày trong chương tiếp theo.
+
+TÓm lại:
+- Biến một phàn nàn về thiết kế (ví dụ, side effects) thành một bài test thất bại.
+- Làm cho code biên dịch nhanh chóng bằng cách sử dụng các stub (code tạm) tối thiểu.
+- Viết code sao cho bài test chạy thành công bằng cách gõ code “điển hình” (obvious implementation) hoặc “giả lập” (fake it) cho đến khi đạt được kết quả đúng.
+
+Việc chuyển hóa cảm nhận của mình (ví dụ, sự ghê tởm với side effects) thành một bài test cụ thể (nhân cùng một Dollar hai lần) là một chủ đề chung trong TDD. Khi bạn có khả năng chuyển hóa những đánh giá thẩm mỹ của mình thành các bài test, các cuộc thảo luận về thiết kế sẽ trở nên ý nghĩa hơn. Thay vì tranh cãi một cách mơ hồ, bạn có thể bàn luận về các trường hợp cụ thể của bài test để đưa ra quyết định đúng đắn về hành vi của hệ thống.
+
+Nói một cách khác, dù bạn có thể bàn luận về “sự thật” hay “vẻ đẹp” trong code suốt buổi tối với bạn bè, khi lập trình bạn cần rút gọn các cuộc thảo luận đó thành các trường hợp cụ thể (test cases) để hướng tới một thiết kế tốt và dễ bảo trì.
+
+## Equality for All
+
+Khi hai biến tham chiếu cùng một đối tượng trong bộ nhớ, thay đổi ở một biến có thể làm thay đổi giá trị của biến kia một cách không mong muốn. 
+→ Giải pháp: Dùng Value Object. Khi một giá trị cần thay đổi, ta tạo một đối tượng mới thay vì thay đổi giá trị của đối tượng cũ.
+
+ Value Object lột kiểu đối tượng không thể thay đổi (immutable). Một khi được tạo ra, giá trị của nó không thể bị thay đổi.
+
+ Ví dụ: Nếu bạn có một đối tượng Dollar đại diện cho số tiền $5, thì nó mãi mãi là $5. Nếu bạn cần $7, bạn phải tạo một đối tượng mới thay vì thay đổi giá trị của đối tượng hiện tại.
+
+ ```csharp
+Dollar five = new Dollar(5);
+Dollar seven = new Dollar(7); // Không thay đổi five, tạo một đối tượng mới
+ ```
+
+Và một 5 Dollar sẽ tương ứng bằng với một 5 Dollar khác, do đó to do chúng ta sẽ được thêm
+
+```
+To do:
+$5 + 10 CHF = $10 if CHF:USD is 2:1
+(Done) $5 * 2 = $10
+Make “amount” private
+(Done) Dollar side-effects?
+Money rounding?
+Equals()
+```
+
+Khi một đối tượng được dùng làm key trong một HashMap, HashSet hoặc HashTable, chúng ta sử dụng HashCode() để nhanh chóng tìm kiếm bucket (vị trí lưu trữ) trong bảng băm.
+
+Do đó to do sẽ thêm:
+
+```
+To do:
+$5 + 10 CHF = $10 if CHF:USD is 2:1
+(Done) $5 * 2 = $10
+Make “amount” private
+(Done) Dollar side-effects?
+Money rounding?
+Equals()
+HashCode()
+```
+
+Khi đó chúng ta viết test case như sau:
+
+```csharp
+    [Fact]
+    public void TestEqual()
+    {
+        Assert.True(new Dollar(5).Equals(new Dollar(5)));
+    }
+```
+
+Và fake it đơn giản chỉ tra về true:
+
+```csharp
+    public override bool Equals(object? obj)
+    {
+        return true;
+    }
+```
+
+Khi ta nói “true” thì thực ra có nghĩa là “5 == 5”, hay trong trường hợp của Dollar, “amount == 5” và cuối cùng là “amount == dollar.amount”.
+
+Triangulation trong thực tế là kỹ thuật đo khoảng cách và hướng của tín hiệu dựa trên các đo đạc từ hai trạm thu khác nhau.
+Trong TDD, “triangulation” có nghĩa là chỉ tổng quát hóa code khi có hai ví dụ trở lên. Khi có thêm ví dụ, chúng ta bắt buộc phải viết code tổng quát hơn để xử lý tất cả các trường hợp.
+
+Ví dụ về Triangulation trong việc so sánh Dollar:
+
+Ban đầu, ta viết một bài test kiểm tra rằng Dollar(5) bằng Dollar(5):
+
+```csharp
+Assert.True(new Dollar(5).Equals(new Dollar(5)));
+```
+
+Để ép buộc tổng quát hóa, ta cần thêm bài test thứ hai, ví dụ là Dollar(5) không bằng Dollar(6):
+
+```csharp
+    [Fact]
+    public void TestEqual()
+    {
+        Assert.True(new Dollar(5).Equals(new Dollar(5)));
+        Assert.False(new Dollar(5).Equals(new Dollar(6)));
+    }
+```
+
+Khi có thêm test case, kết quả sẽ false vì fake giá trị trước đó không bao quát được hết các trường hợp, ta sửa lại hàm Equals.
 
 
+```csharp
+    public override bool Equals(object? obj)
+    {
+        Dollar dollar = (Dollar)obj;
+        return Amount == dollar.Amount;
+    }
+```
 
+Nếu bạn đã thấy rõ cách tạo ra một giải pháp tổng quát và có thể loại bỏ sự trùng lặp giữa code và test, bạn có thể tiến hành refactor ngay lập tức. Tuy nhiên, khi bạn không chắc chắn về cách tiếp cận hoặc thiết kế chưa rõ ràng, việc viết thêm một test mới (hay còn gọi là triangulation) giúp bạn “xoay” vấn đề từ một góc nhìn khác, phát hiện ra những khía cạnh mà trước đó có thể chưa nghĩ đến.
+
+Đây là những khía cạnh khác nhau mà giải pháp của bạn cần phải hỗ trợ. Ví dụ, khi triển khai phương thức so sánh (equals), bạn cần xem xét so sánh với null, so sánh với các đối tượng thuộc kiểu khác… Việc thêm các bài kiểm thử cho những trường hợp này giúp đảm bảo rằng thiết kế của bạn đủ mạnh và tổng quát để xử lý đa dạng tình huống.
+
+```
+To do:
+$5 + 10 CHF = $10 if CHF:USD is 2:1
+(done) $5 * 2 = $10
+Make “amount” private
+(done) Dollar side-effects?
+Money rounding?
+(done) Equals()
+HashCode()
+Equal null
+Equal object
+```
+
+Tóm tắt lại phần trên:
+
+- Nhận diện yêu cầu: Nhận ra mẫu thiết kế (ở đây là Value Object) gợi ý ra một phép toán nào đó cần phải được hỗ trợ.
+- Viết test: Đầu tiên, bạn viết các bài kiểm thử cho phép toán đó.
+- Cài đặt đơn giản: Sau đó, bạn cài đặt giải pháp một cách đơn giản dựa trên các test ban đầu.
+- Triangulation: Thay vì refactor ngay lập tức, bạn tiếp tục viết thêm các test để khám phá các trường hợp khác, giúp bạn nhận diện và gộp lại các trường hợp tương đồng.
+- Refactor: Cuối cùng, bạn refactor để cải thiện thiết kế, như việc chuyển thuộc tính “amount” thành private, bởi giờ đây bạn đã có đủ test để bảo vệ code.
+
+## Privacy
+
+Hàm Times hiện tại đang trả về một Dollar nhưng test case hiện tại chúng ta như sau:
+
+```csharp
+    [Fact]
+    public void TestMultiplication()
+    {
+        Dollar five = new(5);
+        var product = five.Times(2);
+        Assert.Equal(10, product.Amount);
+
+        product = five.Times(3);
+        Assert.Equal(15, product.Amount);
+    }
+```
+
+Test case này chưa làm rõ được ý nghĩa hàm Times, chúng ta sẽ viết lại từng assert và kiểm tra, kết quả cuối cùng là:
+
+```csharp
+    [Fact]
+    public void TestMultiplication()
+    {
+        Dollar five = new(5); 
+        Assert.Equal(new Dollar(10), five.Times(2)); 
+        Assert.Equal(new Dollar(15), five.Times(3));
+    }
+```
 
