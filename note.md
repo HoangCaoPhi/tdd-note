@@ -1,4 +1,4 @@
-Lập trình với việc khám phá một ngôi nhà tối, trong đó mỗi phòng tượng trưng cho một phần của hệ thống hoặc một tính năng mới.
+Lập trình giống với việc khám phá một ngôi nhà tối, trong đó mỗi phòng tượng trưng cho một phần của hệ thống hoặc một tính năng mới.
 
 Viết code mà không có test giống như đi trong bóng tối 
 
@@ -557,7 +557,7 @@ Hàm Times hiện tại đang trả về một Dollar nhưng test case hiện t�
     }
 ```
 
-Test case này chưa làm rõ được ý nghĩa hàm Times, chúng ta sẽ viết lại từng assert và kiểm tra, kết quả cuối cùng là:
+Chúng ta đã có phương thức equals trong lớp Dollar, vậy tại sao không dùng nó để so sánh trực tiếp các đối tượng Dollar thay vì so sánh giá trị amount? Điều này làm cho bài kiểm thử trở nên ý nghĩa hơn, thể hiện rõ rằng: "Kết quả của five.Times(2) là một Dollar có giá trị 10."
 
 ```csharp
     [Fact]
@@ -568,4 +568,51 @@ Test case này chưa làm rõ được ý nghĩa hàm Times, chúng ta sẽ vi�
         Assert.Equal(new Dollar(15), five.Times(3));
     }
 ```
+
+Cả hai câu lệnh assert giờ đây đều so sánh các đối tượng Dollar. Bài kiểm thử trở nên nhất quán và rõ ràng hơn, nói lên rằng việc nhân một Dollar với một hệ số sẽ tạo ra một Dollar khác có giá trị đúng như mong đợi.
+
+Trong bài kiểm thử ban đầu, chúng ta truy cập trực tiếp product.Amount. Nhưng giờ đây, khi đã dùng Equals để so sánh các đối tượng Dollar, bài kiểm thử không còn cần truy cập Amount nữa. Điều này cho phép chúng ta đặt Amount thành private trong lớp Dollar:
+
+```csharp
+public class Dollar
+{
+    private int Amount;
+}
+```
+
+Khi đó danh sách To do sẽ là:
+
+```
+To do:
+    $5 + 10 CHF = $10 if CHF:USD is 2:1
+    x $5 * 2 = $10
+    x Make “amount” private
+    x Dollar side-effects?
+    Money rounding?
+    x Equals()
+    HashCode()
+    Equal null
+    Equal object
+```
+
+Việc tái cấu trúc này có một rủi ro: vì TestMultiplication giờ phụ thuộc vào Equals, nếu Equals được viết sai (ví dụ: luôn trả về true), thì lỗi trong Times có thể không bị phát hiện.  
+
+Phương pháp TDD không nhằm loại bỏ hoàn toàn mọi rủi ro hay đảm bảo mã không bao giờ có lỗi. Thay vào đó, nó chấp nhận rằng một số lỗi có thể xảy ra và sử dụng các chiến lược để giảm thiểu chúng:
+
+Biểu diễn kép:
+Mọi chức năng trong TDD được thể hiện theo hai cách:
+1. Mã triển khai: Ví dụ, phương thức Times thực hiện phép nhân.
+2. Bài kiểm thử: Ví dụ, TestMultiplication xác minh kết quả của Times.
+Sự kiểm tra chéo này giúp tăng khả năng phát hiện lỗi sớm.
+
+Nếu một lỗi lọt qua bài kiểm thử, TDD khuyến khích chúng ta học từ sai lầm:
+- Phát hiện lỗi:
+Giả sử cả Equals và Times đều có lỗi, TestMultiplication có thể pass sai. Lỗi này có thể không lộ ra ngay cho đến khi một vấn đề khác xuất hiện trong quá trình sử dụng mã.
+
+- Phân tích nguyên nhân: Tại sao lỗi này không bị phát hiện? Có thể chúng ta thiếu một bài kiểm thử riêng để kiểm tra Equals.
+Thêm kiểm thử: Viết một bài kiểm thử mới cho Equals để đảm bảo nó hoạt động đúng trong mọi trường hợp.
+
+- Cải thiện: Mỗi lỗi là một bài học. Chúng ta bổ sung kiểm thử để ngăn ngừa các vấn đề tương tự trong tương lai, làm cho hệ thống ngày càng mạnh mẽ hơn.
+
+## Franc-ly Speaking
 
