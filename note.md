@@ -616,3 +616,241 @@ Thêm kiểm thử: Viết một bài kiểm thử mới cho Equals để đảm
 
 ## Franc-ly Speaking
 
+Chúng ta có thể đang quan tâm đến bước đầu tiên trong danh sách những việc cần làm, nhưng có lẽ vẫn còn quá sớm để xử lý công việc đó.
+
+Một điều kiện tiên quyết có vẻ là cần có một đối tượng giống như Dollar, nhưng để đại diện cho Franc. Nếu chúng ta có thể làm cho Franc hoạt động giống như Dollar hiện tại, thì chúng ta sẽ tiến gần hơn đến việc có thể viết và chạy bài kiểm thử cộng hỗn hợp.
+
+```
+To do:
+    $5 + 10 CHF = $10 if CHF:USD is 2:1
+    ok $5 * 2 = $10
+    ok Make “amount” private
+    ok Dollar side-effects?
+    Money rounding?
+    ok Equals()
+    HashCode()
+    Equal null
+    Equal object
+    5 CHF * 2 = 10 CHF
+```
+
+Chúng ta có thể sao chép và chỉnh sửa bài kiểm thử của Dollar:
+
+```csharp
+    [Fact]
+    public void TestFrancMultiplication()
+    {
+        Franc five = new(5);
+        Assert.Equal(new Franc(10), five.Times(2));
+        Assert.Equal(new Franc(15), five.Times(3));
+    }
+```
+
+Bước nhỏ nào sẽ giúp chúng ta có một bài kiểm thử chạy đúng? Chỉ cần sao chép mã của Dollar và thay thế "Dollar" bằng "Franc".
+
+Dừng lại. Khoan đã. Tôi có thể nghe thấy những người yêu thích thiết kế đẹp đang chế giễu và phản đối.
+
+Sao chép và dán lại mã? Cái chết của trừu tượng hóa? Kẻ hủy diệt của thiết kế sạch?
+
+Nếu bạn đang khó chịu, hãy hít một hơi thật sâu. Hít vào... giữ... thở ra. Rồi, ổn rồi.
+
+Chu kỳ của chúng ta có các giai đoạn khác nhau (chúng diễn ra nhanh chóng, đôi khi chỉ trong vài giây, nhưng vẫn là các giai đoạn):
+
+1. Viết bài kiểm thử
+2. Làm cho nó biên dịch được
+3. Làm cho nó chạy được
+4. Loại bỏ sự trùng lặp
+
+Các giai đoạn khác nhau có những mục tiêu khác nhau. Chúng yêu cầu các phong cách giải quyết khác nhau, các quan điểm thẩm mỹ khác nhau. Ba bước đầu tiên cần diễn ra nhanh chóng để chúng ta đạt đến trạng thái đã biết với chức năng mới. Bạn có thể phạm bất kỳ sai lầm nào để đạt được điều đó, vì tốc độ quan trọng hơn thiết kế — chỉ trong khoảnh khắc đó thôi.
+
+Bây giờ tôi đang lo lắng. Tôi vừa trao cho bạn một giấy phép để vứt bỏ tất cả các nguyên tắc của thiết kế tốt. Nhưng dừng lại. Chu kỳ chưa hoàn thành. Một con ngựa ba chân không thể phi nước đại. Ba bước đầu tiên của chu kỳ sẽ không hoạt động nếu thiếu bước thứ tư.
+
+Thiết kế tốt vào thời điểm thích hợp.
+
+**Làm cho nó chạy, sau đó làm cho nó đúng.**
+
+Chúng ta đang ở đâu? À, đúng rồi. Vi phạm tất cả các nguyên tắc thiết kế tốt vì tốc độ (chúng ta sẽ chuộc lỗi trong các chương tiếp theo).
+
+```csharp
+public class Franc
+{
+    private int Amount;
+
+    public Franc(int amount)
+    {
+        Amount = amount;
+    }
+
+    public Franc Times(int multiplier)
+    {
+        return new Franc(Amount * multiplier);
+    }
+
+    public override bool Equals(object? obj)
+    {
+        Franc dollar = (Franc)obj;
+        return Amount == dollar.Amount;
+    }
+}
+```
+
+Vì bước để làm cho mã chạy được quá ngắn, chúng ta thậm chí có thể bỏ qua bước “làm cho nó biên dịch”.
+
+Bây giờ, chúng ta có sự trùng lặp khắp nơi, và chúng ta phải loại bỏ nó trước khi viết bài kiểm thử tiếp theo.
+
+Chúng ta sẽ bắt đầu bằng cách tổng quát hóa phương thức Equals(). Tuy nhiên, chúng ta có thể gạch bỏ một mục trong danh sách việc cần làm, mặc dù phải thêm hai mục mới:
+
+```
+To do:
+    $5 + 10 CHF = $10 if CHF:USD is 2:1
+    $5 * 2 = $10
+    ok Make “amount” private
+    ok Dollar side-effects?
+    Money rounding?
+    ok Equals()
+    HashCode()
+    Equal null
+    Equal object
+    ok 5 CHF * 2 = 10 CHF
+    Dollar/Franc duplication
+    Common equals
+```
+
+Tóm tắt lại:
+- Chúng ta không thể giải quyết một bài kiểm thử lớn, nên đã tạo một bài kiểm thử nhỏ hơn để xử lý.
+- Viết bài kiểm thử bằng cách sao chép và chỉnh sửa mà không ngần ngại.
+- Thậm chí còn tệ hơn, làm cho bài kiểm thử chạy được bằng cách sao chép toàn bộ mã của model.
+- Hứa với bản thân rằng sẽ không rời đi cho đến khi loại bỏ hết trùng lặp.
+
+## Equality for All, Redux
+
+Trong chương trước,  chúng ta đã phạm nhiều "tội lỗi" để làm kiểm thử chạy nhanh chóng. Bây giờ là lúc cần dọn dẹp.
+
+Một khả năng là để một trong các lớp kế thừa từ lớp còn lại. Tôi đã thử, nhưng nó hầu như không tiết kiệm được chút mã nguồn nào. Thay vào đó, chúng ta sẽ tìm một lớp cha chung cho cả hai lớp (tôi cũng đã thử cách này, và nó hoạt động rất tốt, mặc dù sẽ mất một chút thời gian).
+ 
+Chúng ta sẽ bắt đầu bằng cách tạo một lớp Money để chứa mã chung của Equals().
+
+```csharp
+class Money
+```
+
+Tất cả các bài kiểm thử vẫn chạy (không có gì có thể bị phá vỡ vào lúc này, nhưng đây vẫn là thời điểm tốt để chạy kiểm thử).
+
+Nếu Dollar kế thừa từ Money, điều đó không thể gây ra lỗi gì.
+
+```csharp
+class Dollar extends Money {
+    private int Amount;
+}
+```
+
+Không có lỗi nào xảy ra. Bây giờ chúng ta có thể di chuyển biến Amount lên Money:
+
+```csharp
+class Money {
+    protected int Amount;
+}
+```
+
+Cần thay đổi phạm vi từ private thành protected để lớp con vẫn có thể truy cập được. Bây giờ chúng ta có thể làm cho Equals() sẵn sàng để di chuyển lên. Trước tiên, thay đổi khai báo biến tạm thời:
+
+Cập nhật equals() trong Dollar:
+
+```csharp
+    public override bool Equals(object? obj)
+    {
+        Money dollar = (Dollar)obj;
+        return Amount == dollar.Amount;
+    }
+```
+
+Việc cập nhật Dollar thành Money yêu cầu chúng ta phải đưa Equals lên lớp cha Money để truy cập biến 
+Amount:
+
+```csharp
+    public override bool Equals(object? obj)
+    {
+        Money dollar = (Money)obj;
+        return Amount == dollar.Amount;
+    }
+```
+
+Bây giờ chúng ta cần loại bỏ Equals() khỏi Franc. Nhưng trước tiên, hãy kiểm tra lại các bài kiểm thử của chúng ta. Viết thêm một kiểm thử nữa ở lớp DollarTests
+
+```csharp
+    [Fact]
+    public void TestEquality()
+    {
+        Assert.True(new Dollar(5).Equals(new Dollar(5)));
+        Assert.False(new Dollar(5).Equals(new Dollar(6)));
+        Assert.True(new Franc(5).Equals(new Franc(5)));
+        Assert.False(new Franc(5).Equals(new Franc(6)));
+    }
+```
+
+Lại có thêm sự trùng lặp, nhưng chúng ta sẽ xử lý nó sau.
+
+Ok, các kiểm thử cũng đã pass, chúng ta sẽ chỉnh sửa tương tự như lớp Dollar đối với lớp Franc.
+
+Những gì chúng ta đã làm:
+
+- Dần dần di chuyển mã chung từ Dollar lên Money.
+- Cho Franc kế thừa từ Money.
+- Hợp nhất hai phương thức Equals(), sau đó xóa phương thức dư thừa.
+
+## Apples and Oranges
+
+Chúng ta đã có một suy nghĩ ở cuối chương trước—điều gì sẽ xảy ra khi so sánh Franc và Dollar? Chúng ta đã biến nỗi lo lắng này thành một mục trong danh sách việc cần làm, nhưng vẫn không thể gạt nó khỏi đầu. Vậy điều gì sẽ xảy ra?
+
+```csharp
+    [Fact]
+    public void TestEquality()
+    {
+        Assert.True(new Dollar(5).Equals(new Dollar(5)));
+        Assert.False(new Dollar(5).Equals(new Dollar(6)));
+        Assert.True(new Franc(5).Equals(new Franc(5)));
+        Assert.False(new Franc(5).Equals(new Franc(6)));
+        Assert.False(new Franc(5).Equals(new Dollar(5)));
+    }
+```
+
+Kiểm thử thất bại. Dollar và Franc đang được xem là giống nhau. 
+
+Code kiểm tra equals cần phải đảm bảo không so sánh giữa Dollar và Franc. Ta có thể làm điều này bằng cách so sánh loại của hai đối tượng—hai đối tượng Money chỉ bằng nhau nếu số tiền và kiểu class của chúng bằng nhau.
+
+```csharp
+ public override bool Equals(object? obj)
+    {
+        if (obj is not Money money) return false;
+        return Amount == money.Amount && GetType() == money.GetType();
+    }
+```
+
+Hiện tại, việc dùng GetType() để so sánh kiểu có thể xem là một code smell. Trong mô hình domain tài chính, ta nên dùng một tiêu chí hợp lý hơn, chẳng hạn như loại tiền tệ (currency). Nhưng bây giờ, ta chưa có dữ liệu về loại tiền, nên giải pháp này là tạm ổn.
+
+Lúc này, công việc cần làm là:
+
+```
+To do:
+    $5 + 10 CHF = $10 if CHF:USD is 2:1
+    $5 * 2 = $10
+    ok Make “amount” private
+    ok Dollar side-effects?
+    Money rounding?
+    ok Equals()
+    HashCode()
+    Equal null
+    Equal object
+    ok 5 CHF * 2 = 10 CHF
+    Dollar/Franc duplication
+    ok Common equals
+    Common times
+    ok Francs != Dollars
+    Currency?
+```
+
+Những gì chúng ta đã làm được trong chương này:
+- Chuyển một vấn đề tiềm ẩn thành một bài kiểm thử
+- Làm cho kiểm thử chạy đúng theo một cách hợp lý, dù chưa hoàn hảo (GetType())
+- Chưa vội vàng giới thiệu thiết kế mới cho đến khi có lý do chính đáng.
+
